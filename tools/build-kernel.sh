@@ -126,8 +126,13 @@ if grep -q '^CONFIG_FUNCTION_TRACER=y' "$OUT/.config"; then
 fi
 
 echo "== [$STAGE] build Image ==" | tee -a "$LOG"
-make O="$OUT" ARCH=arm64 -j"$(nproc)" HOSTCFLAGS="$HOSTCFLAGS" KCFLAGS="$KCFLAGS" \
-  Image 2>&1 | tee -a "$LOG" | tail -20
+if ! make O="$OUT" ARCH=arm64 -j"$(nproc)" HOSTCFLAGS="$HOSTCFLAGS" KCFLAGS="$KCFLAGS" \
+     Image 2>&1 | tee -a "$LOG" | tail -20
+then
+  echo "ERROR: kernel build failed, see $LOG" >&2
+  grep -E "error:|Error [0-9]|undefined reference" "$LOG" | tail -15 >&2 || true
+  exit 7
+fi
 
 IMG="$OUT/arch/arm64/boot/Image"
 [ -f "$IMG" ] || { echo "ERROR: no Image produced" >&2; exit 5; }

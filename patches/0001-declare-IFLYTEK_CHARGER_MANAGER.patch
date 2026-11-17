@@ -1,0 +1,31 @@
+Declare the vendor charger-manager config the published tree forgot
+
+The vendor defconfig carries CONFIG_IFLYTEK_CHARGER_MANAGER=y but the
+published Kernel_OpenSource tree never declared that symbol, so
+olddefconfig drops it silently. Meanwhile CONFIG_CHARGER_SC2703=y still
+builds sc2703-charger.o, which calls cm_notify_event() -- a symbol that
+only exists when charger-manager.c is compiled in. The link then dies at
+vmlinux with:
+
+    undefined reference to `cm_notify_event'
+
+The driver source is present in the tree, so this is purely a missing
+Kconfig declaration. Add an alias that selects CHARGER_MANAGER, which is
+what the vendor symbol effectively meant.
+
+--- a/drivers/power/supply/Kconfig
++++ b/drivers/power/supply/Kconfig
+@@
++config IFLYTEK_CHARGER_MANAGER
++	bool "Vendor charger manager alias (declared by vendor config)"
++	depends on REGULATOR
++	select CHARGER_MANAGER
++	help
++	  The vendor defconfig sets CONFIG_IFLYTEK_CHARGER_MANAGER=y, but the
++	  published tree never declared it, so olddefconfig silently dropped it
++	  and drivers referencing cm_notify_event() failed to link. This alias
++	  simply selects CHARGER_MANAGER.
++
+ config CHARGER_MANAGER
+ 	bool "Battery charger manager for multiple chargers"
+ 	depends on REGULATOR
